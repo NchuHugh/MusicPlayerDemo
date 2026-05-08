@@ -1,6 +1,5 @@
-package com.example.musicplayerdemo.entity;
+package com.example.musicplayerdemo.player;
 
-@lombok
 public enum PlayMode {
     SEQUENCE,
     LOOP_LIST,

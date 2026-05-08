@@ -5,15 +5,144 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:background="#F7F8FA"
+    android:padding="16dp"
+    tools:context=".activity.MainActivity">
 
     <TextView
-        android:layout_width="wrap_content"
+        android:id="@+id/tvPageTitle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:text="音乐播放器"
+        android:textColor="#202124"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@id/btnSearch"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageButton
+        android:id="@+id/btnSearch"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="搜索"
+        android:src="@android:drawable/ic_menu_search"
+        app:layout_constraintBottom_toBottomOf="@id/tvPageTitle"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tvPageTitle"
+        app:tint="#202124" />
+
+    <TextView
+        android:id="@+id/tvPageSubtitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="测试demo"
+        android:textColor="#7A7F87"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/tvPageTitle"
+        app:layout_constraintTop_toBottomOf="@id/tvPageTitle" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMusicList"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="18dp"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toTopOf="@id/layoutMiniPlayer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvPageSubtitle"
+        tools:itemCount="6"
+        tools:listitem="@android:layout/simple_list_item_2" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutMiniPlayer"
+        android:layout_width="0dp"
+        android:layout_height="72dp"
+        android:background="#FFFFFFFF"
+        android:elevation="8dp"
+        android:foreground="?attr/selectableItemBackground"
+        android:paddingStart="12dp"
+        android:paddingEnd="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageView
+            android:id="@+id/ivMiniCover"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="#E8EAED"
+            android:contentDescription="当前歌曲封面"
+            android:padding="10dp"
+            android:src="@android:drawable/ic_media_play"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="#5F6368" />
+
+        <TextView
+            android:id="@+id/tvMiniTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="未选择歌曲"
+            android:textColor="#202124"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toTopOf="@id/tvMiniArtist"
+            app:layout_constraintEnd_toStartOf="@id/btnMiniPlayPause"
+            app:layout_constraintStart_toEndOf="@id/ivMiniCover"
+            app:layout_constraintTop_toTopOf="@id/ivMiniCover"
+            app:layout_constraintVertical_chainStyle="packed" />
+
+        <TextView
+            android:id="@+id/tvMiniArtist"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="点击列表开始播放"
+            android:textColor="#7A7F87"
+            android:textSize="13sp"
+            app:layout_constraintBottom_toBottomOf="@id/ivMiniCover"
+            app:layout_constraintEnd_toStartOf="@id/btnMiniPlayPause"
+            app:layout_constraintStart_toEndOf="@id/ivMiniCover"
+            app:layout_constraintTop_toBottomOf="@id/tvMiniTitle" />
+
+        <ImageButton
+            android:id="@+id/btnMiniPlayPause"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="播放或暂停"
+            android:src="@android:drawable/ic_media_play"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnMiniNext"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="#202124" />
+
+        <ImageButton
+            android:id="@+id/btnMiniNext"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="下一首"
+            android:src="@android:drawable/ic_media_next"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="#202124" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
