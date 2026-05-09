@@ -20,5 +20,5 @@ public class PlayerState {
 
     private int duration;
 
-
+    private PlayMode playMode;
 }

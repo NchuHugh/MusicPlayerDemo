@@ -4,21 +4,19 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
-import com.example.musicplayerdemo.data.Music;
-
 public class DBHelper extends SQLiteOpenHelper {
 
-    DBHelper(Context context){
-    super(context,MusicContract.DB_NAME,null, MusicContract.DB_VERSION);
-    //父类构造原型 public SQLiteOpenHelper(
-        //    android.content.Context context,
-        //    String name,
-        //    android.database.sqlite.SQLiteDatabase.CursorFactory factory,
-        //    int version
-        //)
+    /**
+     * 创建数据库帮助类实例，指定数据库名称和版本。
+     */
+    DBHelper(Context context) {
+        super(context, MusicContract.DB_NAME, null, MusicContract.DB_VERSION);
     }
 
 
+    /**
+     * 首次创建数据库时建表，保存歌曲元数据、收藏状态和最近播放时间。
+     */
     @Override
     public void onCreate(SQLiteDatabase db) {
         //建表sql
@@ -37,6 +35,9 @@ public class DBHelper extends SQLiteOpenHelper {
         db.execSQL(sql);
     }
 
+    /**
+     * 数据库版本升级时重建歌曲表；学习阶段先采用简单重建策略。
+     */
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         //简单重建

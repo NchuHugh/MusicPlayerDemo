@@ -22,6 +22,9 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
     private final List<Music> musicList;
     private final OnMusicClickListener listener;
 
+    /**
+     * 创建歌曲列表适配器，接收列表数据和 item 点击回调。
+     */
     public MusicAdapter(List<Music> musicList, OnMusicClickListener listener) {
         this.musicList = musicList;
         //接收外部的歌曲列表
@@ -30,8 +33,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
 
 
     /**
-     *
-     将布局文件转化成view对象
+     * 将 item_music.xml 转换成 ViewHolder，供 RecyclerView 复用。
      */
     @NonNull
     @Override
@@ -43,7 +45,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
     }
 
     /**
-     * 将Music的对应值绑定到MusicItem上
+     * 将指定位置的 Music 数据绑定到列表 item 上，并注册点击事件。
      */
     @Override
     public void onBindViewHolder(@NonNull MusicViewHolder holder, int position) {
@@ -61,7 +63,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
     }
 
     /**
-     * 统一读取 item_music 中的各 View，封装后方便后续重新赋值
+     * 缓存单个歌曲 item 中的控件引用，减少列表滚动时重复查找控件的成本。
      */
     public static class MusicViewHolder extends RecyclerView.ViewHolder {
         ImageView ivCover;
@@ -69,6 +71,9 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
         TextView tvArtist;
         TextView tvDuration;
 
+        /**
+         * 从 itemView 中绑定封面、标题、歌手和时长控件。
+         */
         public MusicViewHolder(@NonNull View itemView) {
             super(itemView);
             ivCover = itemView.findViewById(R.id.ivCover);
@@ -78,12 +83,17 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
         }
     }
 
+    /**
+     * 返回列表数据数量，RecyclerView 根据该值决定需要展示多少个 item。
+     */
     @Override
     public int getItemCount() {
         return musicList == null ? 0 : musicList.size();
     }
 
-    //事件监听 函数式接口 具体实现使用lambda表达式
+    /**
+     * 歌曲 item 点击回调，由 Activity 决定点击后执行跳转或播放等操作。
+     */
     public interface OnMusicClickListener {
         void onMusicClick(Music music);
     }
