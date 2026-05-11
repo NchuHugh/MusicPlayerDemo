@@ -9,12 +9,12 @@ public class MusicRepository {
     private static final List<Music> musicList = new ArrayList<>();
 
     static {
-        musicList.add(new Music(1, "晴天", "周杰伦", 269, R.drawable.ic_launcher_foreground, R.raw.qingtian, false, 0));
-        musicList.add(new Music(2, "那天下雨了", "周杰伦", 223, R.drawable.ic_launcher_foreground, R.raw.natianxiayule, false, 0));
-        musicList.add(new Music(3, "雨天", "孙燕姿", 241, R.drawable.ic_launcher_foreground, R.raw.yutian, false, 0));
-        musicList.add(new Music(4, "阴天", "莫文蔚", 242, R.drawable.ic_launcher_foreground, R.raw.yintian, false, 0));
-        musicList.add(new Music(5, "最佳损友", "陈奕迅", 223, R.drawable.ic_launcher_foreground, R.raw.zuijiasunyou, false, 0));
-        musicList.add(new Music(6, "沙龙", "陈奕迅", 275, R.drawable.ic_launcher_foreground, R.raw.shalong, false, 0));
+        musicList.add(new Music(1, "晴天", "周杰伦", 269, R.drawable.qingtian, R.raw.qingtian, false, 0));
+        musicList.add(new Music(2, "那天下雨了", "周杰伦", 223, R.drawable.natianxiayule, R.raw.natianxiayule, false, 0));
+        musicList.add(new Music(3, "雨天", "孙燕姿", 241, R.drawable.yutian, R.raw.yutian, false, 0));
+        musicList.add(new Music(4, "阴天", "莫文蔚", 242, R.drawable.yintian, R.raw.yintian, false, 0));
+        musicList.add(new Music(5, "最佳损友", "陈奕迅", 223, R.drawable.zuijiasunyou, R.raw.zuijiasunyou, false, 0));
+        musicList.add(new Music(6, "沙龙", "陈奕迅", 275, R.drawable.shalong, R.raw.shalong, false, 0));
 
     }
 

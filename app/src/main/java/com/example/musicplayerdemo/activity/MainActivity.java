@@ -43,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private MusicPlayerService musicPlayerService;
     private boolean serviceBound = false;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    /*每秒定时刷新*/
     private final Runnable miniPlayerRefreshRunnable = new Runnable() {
         @Override
         public void run() {
@@ -91,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 页面不可见时停止底部播放器刷新并解绑 Service。
+     * 页面不可见时停止底部播放器刷新并解绑 Service。 节约资源
      */
     @Override
     protected void onStop() {
@@ -178,6 +179,7 @@ public class MainActivity extends AppCompatActivity {
         tvMiniArtist.setText(music.getArtist());
 
         if (music.getCoverResId() != 0) {
+            ivMiniCover.clearColorFilter();
             ivMiniCover.setImageResource(music.getCoverResId());
         }
     }
@@ -208,6 +210,7 @@ public class MainActivity extends AppCompatActivity {
         tvMiniTitle.setText(music.getTitle());
         tvMiniArtist.setText(music.getArtist());
         if (music.getCoverResId() != 0) {
+            ivMiniCover.clearColorFilter();
             ivMiniCover.setImageResource(music.getCoverResId());
         }
 

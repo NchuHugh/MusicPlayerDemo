@@ -78,12 +78,11 @@
             android:layout_height="48dp"
             android:background="#E8EAED"
             android:contentDescription="当前歌曲封面"
-            android:padding="10dp"
+            android:scaleType="centerCrop"
             android:src="@android:drawable/ic_media_play"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:tint="#5F6368" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/tvMiniTitle"

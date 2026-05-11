@@ -1,8 +1,11 @@
 package com.example.musicplayerdemo.activity;
 
+import android.Manifest;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -24,6 +27,8 @@ import com.example.musicplayerdemo.utils.Constants;
 import com.example.musicplayerdemo.utils.TimeFormatConverter;
 
 public class PlayerActivity extends AppCompatActivity {
+    private static final int REQUEST_POST_NOTIFICATIONS = 1001;
+
     private TextView tvSongTitle;
     private TextView tvArtist;
     private TextView tvTotalTime;
@@ -59,7 +64,9 @@ public class PlayerActivity extends AppCompatActivity {
             musicPlayerService = binder.getService();
             serviceBound = true;
             int musicId = getIntent().getIntExtra(Constants.EXTRA_MUSIC_ID, -1);
-            playInitialMusicIfNeeded(musicId);
+            if (!isOpenedFromNotification()) {
+                playInitialMusicIfNeeded(musicId);
+            }
             updateUiFromState();
             startUiRefresh();
         }
@@ -92,6 +99,13 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     /**
+     * 判断当前页面是否由通知点击打开；通知只负责回到详情页，不触发重新播放。
+     */
+    private boolean isOpenedFromNotification() {
+        return getIntent().getBooleanExtra(Constants.EXTRA_FROM_NOTIFICATION, false);
+    }
+
+    /**
      * 初始化播放详情页，绑定 UI、事件和播放服务，并加载入口歌曲。
      */
     @Override
@@ -101,11 +115,34 @@ public class PlayerActivity extends AppCompatActivity {
 
         initViews();
         initEvents();
+        requestNotificationPermissionIfNeeded();
         initService();
     }
 
     /**
-     * 启动并绑定 MusicPlayerService，为后续把播放控制迁移到 Service 做准备。
+     * 已存在的 PlayerActivity 被通知重新唤起时，只刷新 Intent 和 UI，不重新播放。
+     */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        updateUiFromState();
+    }
+
+    /**
+     * Android 13 及以上显示通知需要运行时申请 POST_NOTIFICATIONS 权限。
+     */
+    private void requestNotificationPermissionIfNeeded() {
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    REQUEST_POST_NOTIFICATIONS
+            );
+        }
+    }
+
+    /**
+     * 启动并绑定 MusicPlayerService
      */
     private void initService() {
         Intent serviceIntent = new Intent(this, MusicPlayerService.class);
@@ -208,6 +245,7 @@ public class PlayerActivity extends AppCompatActivity {
         seekBarProgress.setProgress(state.getCurrentPosition());
 
         if (music.getCoverResId() != 0) {
+            ivCover.clearColorFilter();
             ivCover.setImageResource(music.getCoverResId());
         }
 
