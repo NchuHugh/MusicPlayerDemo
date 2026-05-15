@@ -1,8 +1,10 @@
 package com.example.musicplayerdemo.activity;
 
+import android.Manifest;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -14,7 +16,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -24,16 +28,22 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.musicplayerdemo.R;
 import com.example.musicplayerdemo.adapter.MusicAdapter;
 import com.example.musicplayerdemo.data.Music;
+import com.example.musicplayerdemo.data.MusicLocalScanGateway;
 import com.example.musicplayerdemo.data.MusicRepository;
-import com.example.musicplayerdemo.player.MusicPlayerService;
+import com.example.musicplayerdemo.service.MusicPlayerService;
 import com.example.musicplayerdemo.player.PlaybackState;
 import com.example.musicplayerdemo.player.PlayerState;
 import com.example.musicplayerdemo.utils.AlbumCoverProgressUtil;
 import com.example.musicplayerdemo.utils.Constants;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
+    private static final int REQUEST_READ_MEDIA_AUDIO = 3001;
+
     private TextView tvMiniTitle;
     private TextView tvMiniArtist;
     private ImageView ivMiniCover;
@@ -43,6 +53,9 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton btnMiniPlayPause;
     private MusicPlayerService musicPlayerService;
     private boolean serviceBound = false;
+    private MusicAdapter musicAdapter;
+    private final ArrayList<Music> displayedMusic = new ArrayList<>();
+    private final ExecutorService scanExecutor = Executors.newSingleThreadExecutor();
     /*Handler：Android 中用于线程间通信的工具，可以将一个任务（Runnable）或消息（Message）投递到指定线程的消息队列中执行。
     * Looper.getMainLooper() 获取主线程（UI 线程）的 Looper 对象。 当 Looper 启动后，会执行一个无限循环，直到线程终止
     将这个 Looper 传递给 Handler 的构造方法，这个 Handler 会绑定到主线程。*/
@@ -82,8 +95,15 @@ public class MainActivity extends AppCompatActivity {
         });
 
         initViews();
+        MusicRepository.initLibrary(this);
         initRecyclerView();
         initEvents();
+    }
+
+    @Override
+    protected void onDestroy() {
+        scanExecutor.shutdown();
+        super.onDestroy();
     }
 
     /**
@@ -124,22 +144,25 @@ public class MainActivity extends AppCompatActivity {
      * 从仓库获取歌曲数据，并初始化 RecyclerView 的布局管理器和适配器。
      */
     private void initRecyclerView() {
-        List<Music> musicList = MusicRepository.getMusicList();
+        displayedMusic.clear();
+        displayedMusic.addAll(MusicRepository.getMusicList());
 
-        MusicAdapter adapter = new MusicAdapter(musicList, music -> {
+        musicAdapter = new MusicAdapter(displayedMusic, music -> {
             updateMiniPlayer(music);
             openPlayerDetail(music);
         });
 
         RecyclerView listView = findViewById(R.id.rvMusicList);
         listView.setLayoutManager(new LinearLayoutManager(this));  //默认方向是 VERTICAL 垂直
-        listView.setAdapter(adapter);
+        listView.setAdapter(musicAdapter);
     }
 
     /**
      * 绑定底部迷你播放器点击事件，包括打开详情页和切换下一首。
      */
     private void initEvents() {
+        findViewById(R.id.btnScanLocal).setOnClickListener(v -> requestScanLocalMusic());
+
         layoutMiniPlayer.setOnClickListener(v -> {
             Music music = getCurrentDisplayMusic();
             if (music == null) {
@@ -174,6 +197,57 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * 申请音频读取权限后，通过 {@link MusicLocalScanGateway} 扫描本机音乐。
+     */
+    private void requestScanLocalMusic() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO)
+                == PackageManager.PERMISSION_GRANTED) {
+            performScanLocalMusic();
+            return;
+        }
+        requestPermissions(new String[]{Manifest.permission.READ_MEDIA_AUDIO}, REQUEST_READ_MEDIA_AUDIO);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+            int requestCode,
+            @NonNull String[] permissions,
+            @NonNull int[] grantResults
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != REQUEST_READ_MEDIA_AUDIO) {
+            return;
+        }
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            performScanLocalMusic();
+        } else {
+            Toast.makeText(this, R.string.permission_audio_denied, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * 在后台通过 ContentProvider 扫描，更新 {@link MusicRepository} 与列表。
+     */
+    private void performScanLocalMusic() {
+        scanExecutor.execute(() -> {
+            List<Music> parsed = MusicLocalScanGateway.scanAllTracks(MainActivity.this);
+            runOnUiThread(() -> applyScanResult(parsed));
+        });
+    }
+
+    private void applyScanResult(List<Music> parsed) {
+        if (parsed.isEmpty()) {
+            Toast.makeText(this, R.string.scan_local_empty, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        List<Music> saved = MusicRepository.saveScannedLibrary(this, parsed);
+        displayedMusic.clear();
+        displayedMusic.addAll(saved);
+        musicAdapter.notifyDataSetChanged();
+        Toast.makeText(this, getString(R.string.scan_local_found, saved.size()), Toast.LENGTH_SHORT).show();
+    }
+
+    /**
      * 将选中的歌曲信息刷新到底部迷你播放器。
      */
     private void updateMiniPlayer(Music music) {
@@ -191,6 +265,8 @@ public class MainActivity extends AppCompatActivity {
                     music.getDuration() * 1000,
                     48
             ));
+        } else {
+            ivMiniCover.setImageResource(android.R.drawable.ic_media_play);
         }
     }
 
@@ -228,6 +304,8 @@ public class MainActivity extends AppCompatActivity {
                     state.getDuration() * 1000,
                     48
             ));
+        } else {
+            ivMiniCover.setImageResource(android.R.drawable.ic_media_play);
         }
 
         if (state.getPlaybackState() == PlaybackState.PLAYING) {

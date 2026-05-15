@@ -17,17 +17,17 @@
         android:textColor="#202124"
         android:textSize="26sp"
         android:textStyle="bold"
-        app:layout_constraintEnd_toStartOf="@id/btnSearch"
+        app:layout_constraintEnd_toStartOf="@id/btnScanLocal"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ImageButton
-        android:id="@+id/btnSearch"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
+    <ImageView
+        android:id="@+id/btnScanLocal"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="搜索"
-        android:src="@android:drawable/ic_menu_search"
+        android:contentDescription="@string/scan_local_music"
+        android:src="@drawable/add"
         app:layout_constraintBottom_toBottomOf="@id/tvPageTitle"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/tvPageTitle"
@@ -38,7 +38,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="测试demo"
+        android:text="@string/main_subtitle_hint"
         android:textColor="#7A7F87"
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"

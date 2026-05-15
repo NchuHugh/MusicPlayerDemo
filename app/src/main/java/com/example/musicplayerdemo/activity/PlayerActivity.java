@@ -5,7 +5,6 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -20,7 +19,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.musicplayerdemo.R;
 import com.example.musicplayerdemo.data.Music;
-import com.example.musicplayerdemo.player.MusicPlayerService;
+import com.example.musicplayerdemo.service.MusicPlayerService;
+import com.example.musicplayerdemo.player.PlayMode;
 import com.example.musicplayerdemo.player.PlaybackState;
 import com.example.musicplayerdemo.player.PlayerState;
 import com.example.musicplayerdemo.utils.Constants;
@@ -34,6 +34,7 @@ public class PlayerActivity extends AppCompatActivity {
     private TextView tvTotalTime;
     private ImageView ivCover;
     private TextView tvCurrentTime;
+    private ImageButton btnPlayMode;
     private ImageButton btnPrevious;
     private ImageButton btnNext;
     private ImageButton btnPlayPause;
@@ -159,6 +160,7 @@ public class PlayerActivity extends AppCompatActivity {
         tvTotalTime = findViewById(R.id.tvTotalTime);
         ivCover = findViewById(R.id.ivCover);
         tvCurrentTime = findViewById(R.id.tvCurrentTime);
+        btnPlayMode = findViewById(R.id.btnPlayMode);
         btnPrevious = findViewById(R.id.btnPrevious);
         btnNext = findViewById(R.id.btnNext);
         btnPlayPause = findViewById(R.id.btnPlayPause);
@@ -169,8 +171,17 @@ public class PlayerActivity extends AppCompatActivity {
      * 注册页面上的交互事件，包括返回、播放暂停、上一首下一首和拖动进度条。
      */
     private void initEvents() {
-        //左上返回
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+        btnPlayMode.setOnClickListener(v -> {
+            if (!serviceBound || musicPlayerService == null) {
+                Toast.makeText(this, "播放器服务未连接", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            PlayMode mode = musicPlayerService.cyclePlayMode();
+            btnPlayMode.setImageResource(mode.getIconResId());
+            String label = getString(mode.getLabelResId());
+            Toast.makeText(this, getString(R.string.play_mode_switched, label), Toast.LENGTH_SHORT).show();
+        });
         //播放/暂停
         btnPlayPause.setOnClickListener(v -> {
             if (!serviceBound || musicPlayerService == null) {
@@ -247,6 +258,8 @@ public class PlayerActivity extends AppCompatActivity {
         if (music.getCoverResId() != 0) {
             ivCover.clearColorFilter();
             ivCover.setImageResource(music.getCoverResId());
+        } else {
+            ivCover.setImageResource(android.R.drawable.ic_media_play);
         }
 
         if (state.getPlaybackState() == PlaybackState.PLAYING) {
@@ -254,6 +267,9 @@ public class PlayerActivity extends AppCompatActivity {
         } else {
             btnPlayPause.setImageResource(android.R.drawable.ic_media_play);
         }
+
+        PlayMode playMode = state.getPlayMode() == null ? PlayMode.SEQUENCE : state.getPlayMode();
+        btnPlayMode.setImageResource(playMode.getIconResId());
     }
 
     /**

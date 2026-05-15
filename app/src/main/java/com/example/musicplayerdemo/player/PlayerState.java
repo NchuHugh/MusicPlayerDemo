@@ -12,8 +12,6 @@ import lombok.NoArgsConstructor;
 public class PlayerState {
     private Music currentMusic;
 
-    private int currentIndex; // 当前歌曲索引
-
     private PlaybackState playbackState;
 
     private int currentPosition;

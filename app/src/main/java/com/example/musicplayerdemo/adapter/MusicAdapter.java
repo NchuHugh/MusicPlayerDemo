@@ -31,7 +31,6 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
         this.listener = listener;
     }
 
-
     /**
      * 将 item_music.xml 转换成 ViewHolder，供 RecyclerView 复用。
      */
@@ -53,7 +52,11 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHol
         holder.tvTitle.setText(music.getTitle());
         holder.tvArtist.setText(music.getArtist());
         holder.tvDuration.setText(TimeFormatConverter.second2Min(music.getDuration()));
-        holder.ivCover.setImageResource(music.getCoverResId());
+        if (music.getCoverResId() != 0) {
+            holder.ivCover.setImageResource(music.getCoverResId());
+        } else {
+            holder.ivCover.setImageResource(android.R.drawable.ic_media_play);
+        }
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {

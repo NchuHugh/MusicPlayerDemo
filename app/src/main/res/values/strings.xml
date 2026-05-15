@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">MusicPlayerDemo</string>
+    <string name="main_subtitle_hint">pp音乐 · 已扫描曲库将自动加载，右上角可刷新</string>
+    <string name="scan_local_music">扫描本地歌曲</string>
+    <string name="scan_local_empty">未扫描到本地音频</string>
+    <string name="scan_local_found">已加载 %1$d 首本地歌曲</string>
+    <string name="permission_audio_denied">未授予读取音频权限，无法扫描</string>
+    <string name="play_mode_sequence">顺序播放</string>
+    <string name="play_mode_loop_list">列表循环</string>
+    <string name="play_mode_loop_one">单曲循环</string>
+    <string name="play_mode_shuffle">随机播放</string>
+    <string name="play_mode_switched">已切换为：%1$s</string>
 </resources>

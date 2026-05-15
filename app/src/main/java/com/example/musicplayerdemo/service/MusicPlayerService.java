@@ -1,4 +1,4 @@
-package com.example.musicplayerdemo.player;
+package com.example.musicplayerdemo.service;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -6,9 +6,9 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.os.Binder;
-import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -21,9 +21,14 @@ import com.example.musicplayerdemo.R;
 import com.example.musicplayerdemo.activity.PlayerActivity;
 import com.example.musicplayerdemo.data.Music;
 import com.example.musicplayerdemo.data.MusicRepository;
+import com.example.musicplayerdemo.player.PlayMode;
+import com.example.musicplayerdemo.player.PlaybackState;
+import com.example.musicplayerdemo.player.PlayerState;
+import com.example.musicplayerdemo.receiver.PlaybackActionReceiver;
 import com.example.musicplayerdemo.utils.AlbumCoverProgressUtil;
 import com.example.musicplayerdemo.utils.Constants;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -43,6 +48,9 @@ public class MusicPlayerService extends Service {
     private final IBinder binder = new MusicBinder();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Random random = new Random();
+    private final List<Integer> shuffleHistory = new ArrayList<>();
+    private int shuffleHistoryIndex = -1;
+    private boolean shuffleNavigatingBack = false;
     private boolean isPlaying = false;
 
     /**
@@ -73,7 +81,7 @@ public class MusicPlayerService extends Service {
     }
 
     /**
-     * 处理通知栏按钮发送过来的播放控制 Action。
+     * 处理播放控制 Action（可来自 {@link com.example.musicplayerdemo.receiver.PlaybackActionReceiver} 转发的通知栏操作）。
      */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -110,6 +118,11 @@ public class MusicPlayerService extends Service {
             return;
         }
 
+        if (getPlayModeOrDefault() == PlayMode.SHUFFLE && !shuffleNavigatingBack) {
+            appendShuffleHistory(musicId);
+        }
+        shuffleNavigatingBack = false;
+
         releaseMediaPlayer();
 
         playerState.setCurrentMusic(music);
@@ -117,7 +130,25 @@ public class MusicPlayerService extends Service {
         playerState.setCurrentPosition(0);
         playerState.setPlaybackState(PlaybackState.PREPARING);
 
-        mediaPlayer = MediaPlayer.create(this, music.getAudioResId());
+        try {
+            if (music.getAudioUri() != null) {
+                mediaPlayer = new MediaPlayer();
+                mediaPlayer.setAudioAttributes(
+                        new AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_MEDIA)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build()
+                );
+                mediaPlayer.setDataSource(this, music.getAudioUri());
+                mediaPlayer.prepare();
+            } else {
+                mediaPlayer = MediaPlayer.create(this, music.getAudioResId());
+            }
+        } catch (Exception e) {
+            playerState.setPlaybackState(PlaybackState.ERROR);
+            return;
+        }
+
         if (mediaPlayer == null) {
             playerState.setPlaybackState(PlaybackState.ERROR);
             return;
@@ -171,7 +202,26 @@ public class MusicPlayerService extends Service {
     }
 
     /**
-     * 切换并播放下一首歌曲。
+     * 循环切换播放模式：顺序 → 列表循环 → 单曲循环 → 随机。
+     */
+    public PlayMode cyclePlayMode() {
+        PlayMode nextMode = getPlayModeOrDefault().next();
+        playerState.setPlayMode(nextMode);
+        if (nextMode == PlayMode.SHUFFLE) {
+            resetShuffleHistory();
+            Music current = playerState.getCurrentMusic();
+            if (current != null) {
+                shuffleHistory.add(current.getId());
+                shuffleHistoryIndex = 0;
+            }
+        } else {
+            clearShuffleHistory();
+        }
+        return nextMode;
+    }
+
+    /**
+     * 切换并播放下一首歌曲（遵循当前播放模式）。
      */
     public void playNext() {
         Music currentMusic = playerState.getCurrentMusic();
@@ -180,16 +230,26 @@ public class MusicPlayerService extends Service {
             return;
         }
 
-        Music nextMusic = MusicRepository.getNextMusic(currentMusic.getId());
-        if (nextMusic == null) {
-            return;
+        switch (getPlayModeOrDefault()) {
+            case LOOP_LIST:
+                playNextOrFirst();
+                break;
+            case SHUFFLE:
+                playRandomNext();
+                break;
+            case LOOP_ONE:
+            case SEQUENCE:
+            default:
+                Music nextMusic = MusicRepository.getNextMusic(currentMusic.getId());
+                if (nextMusic != null) {
+                    play(nextMusic.getId());
+                }
+                break;
         }
-
-        play(nextMusic.getId());
     }
 
     /**
-     * 切换并播放上一首歌曲。
+     * 切换并播放上一首歌曲（遵循当前播放模式）。
      */
     public void playPrevious() {
         Music currentMusic = playerState.getCurrentMusic();
@@ -198,9 +258,21 @@ public class MusicPlayerService extends Service {
             return;
         }
 
-        Music previousMusic = MusicRepository.getPreviousMusic(currentMusic.getId());
-        if (previousMusic != null) {
-            play(previousMusic.getId());
+        switch (getPlayModeOrDefault()) {
+            case LOOP_LIST:
+                playPreviousOrLast();
+                break;
+            case SHUFFLE:
+                playShufflePrevious();
+                break;
+            case LOOP_ONE:
+            case SEQUENCE:
+            default:
+                Music previousMusic = MusicRepository.getPreviousMusic(currentMusic.getId());
+                if (previousMusic != null) {
+                    play(previousMusic.getId());
+                }
+                break;
         }
     }
 
@@ -250,13 +322,7 @@ public class MusicPlayerService extends Service {
         playerState.setCurrentPosition(0);
         updateNotification();
 
-        PlayMode playMode = playerState.getPlayMode();
-        if (playMode == null) {
-            playMode = PlayMode.SEQUENCE;
-            playerState.setPlayMode(playMode);
-        }
-
-        switch (playMode) {
+        switch (getPlayModeOrDefault()) {
             case LOOP_ONE:
                 play(playerState.getCurrentMusic().getId());
                 break;
@@ -264,7 +330,7 @@ public class MusicPlayerService extends Service {
                 playNextOrFirst();
                 break;
             case SHUFFLE:
-                playRandom();
+                playRandomNext();
                 break;
             case SEQUENCE:
             default:
@@ -308,17 +374,98 @@ public class MusicPlayerService extends Service {
     }
 
     /**
-     * 随机播放列表中的一首歌曲。
+     * 随机播放一首与当前不同的歌曲（列表仅一首时重复播放）。
      */
-    private void playRandom() {
+    private void playRandomNext() {
         List<Music> musicList = MusicRepository.getMusicList();
         if (musicList.isEmpty()) {
             playerState.setPlaybackState(PlaybackState.COMPLETED);
             return;
         }
 
-        Music music = musicList.get(random.nextInt(musicList.size()));
-        play(music.getId());
+        if (musicList.size() == 1) {
+            play(musicList.get(0).getId());
+            return;
+        }
+
+        Music current = playerState.getCurrentMusic();
+        Music target;
+        do {
+            target = musicList.get(random.nextInt(musicList.size()));
+        } while (current != null && target.getId() == current.getId());
+
+        play(target.getId());
+    }
+
+    /**
+     * 随机模式下回到上一首播放记录。
+     */
+    private void playShufflePrevious() {
+        if (shuffleHistoryIndex > 0) {
+            shuffleHistoryIndex--;
+            shuffleNavigatingBack = true;
+            play(shuffleHistory.get(shuffleHistoryIndex));
+            return;
+        }
+
+        Music current = playerState.getCurrentMusic();
+        if (current == null) {
+            return;
+        }
+        Music previous = MusicRepository.getPreviousMusic(current.getId());
+        if (previous != null) {
+            shuffleNavigatingBack = true;
+            play(previous.getId());
+        }
+    }
+
+    /**
+     * 列表循环模式下播放上一首，若在开头则跳到最后一首。
+     */
+    private void playPreviousOrLast() {
+        Music currentMusic = playerState.getCurrentMusic();
+        Music previousMusic = currentMusic == null
+                ? null
+                : MusicRepository.getPreviousMusic(currentMusic.getId());
+        if (previousMusic != null) {
+            play(previousMusic.getId());
+            return;
+        }
+
+        List<Music> musicList = MusicRepository.getMusicList();
+        if (musicList.isEmpty()) {
+            return;
+        }
+        play(musicList.get(musicList.size() - 1).getId());
+    }
+
+    private PlayMode getPlayModeOrDefault() {
+        PlayMode playMode = playerState.getPlayMode();
+        if (playMode == null) {
+            playMode = PlayMode.SEQUENCE;
+            playerState.setPlayMode(playMode);
+        }
+        return playMode;
+    }
+
+    private void appendShuffleHistory(int musicId) {
+        if (shuffleHistoryIndex >= 0 && shuffleHistoryIndex < shuffleHistory.size() - 1) {
+            shuffleHistory.subList(shuffleHistoryIndex + 1, shuffleHistory.size()).clear();
+        }
+        if (shuffleHistory.isEmpty() || shuffleHistory.get(shuffleHistory.size() - 1) != musicId) {
+            shuffleHistory.add(musicId);
+        }
+        shuffleHistoryIndex = shuffleHistory.size() - 1;
+    }
+
+    private void resetShuffleHistory() {
+        shuffleHistory.clear();
+        shuffleHistoryIndex = -1;
+        shuffleNavigatingBack = false;
+    }
+
+    private void clearShuffleHistory() {
+        resetShuffleHistory();
     }
 
     /**
@@ -360,16 +507,17 @@ public class MusicPlayerService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        RemoteViews notificationView = buildNotificationView(music, title, artist, pendingIntent);
+        RemoteViews collapsedView = buildNotificationView(music, title, artist, pendingIntent);
+        RemoteViews expandedView = buildNotificationView(music, title, artist, pendingIntent);
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification_transparent)
                 .setContentTitle(title)
                 .setContentText(artist)
                 .setContentIntent(pendingIntent)
-                .setCustomContentView(notificationView)
-                .setCustomBigContentView(notificationView)
-                .setOnlyAlertOnce(true)
+                .setCustomContentView(collapsedView)
+                .setCustomBigContentView(expandedView)
+                .setOnlyAlertOnce(false)
                 .setOngoing(playerState.getPlaybackState() == PlaybackState.PLAYING)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build();
@@ -406,26 +554,26 @@ public class MusicPlayerService extends Service {
         views.setOnClickPendingIntent(R.id.layoutNotificationPlayer, contentIntent);
         views.setOnClickPendingIntent(
                 R.id.btnNotificationPrevious,
-                buildServiceActionPendingIntent(Constants.ACTION_PREVIOUS, 1)
+                buildPlaybackBroadcastPendingIntent(Constants.ACTION_PREVIOUS, 1)
         );
         views.setOnClickPendingIntent(
                 R.id.btnNotificationPlayPause,
-                buildServiceActionPendingIntent(Constants.ACTION_PLAY_PAUSE, 2)
+                buildPlaybackBroadcastPendingIntent(Constants.ACTION_PLAY_PAUSE, 2)
         );
         views.setOnClickPendingIntent(
                 R.id.btnNotificationNext,
-                buildServiceActionPendingIntent(Constants.ACTION_NEXT, 3)
+                buildPlaybackBroadcastPendingIntent(Constants.ACTION_NEXT, 3)
         );
         return views;
     }
 
     /**
-     * 创建发送给 MusicPlayerService 的通知栏按钮 PendingIntent。
+     * 通知栏按钮：先发显式广播到 {@link PlaybackActionReceiver}，再由 Receiver 启动 Service。
      */
-    private PendingIntent buildServiceActionPendingIntent(String action, int requestCode) {
-        Intent intent = new Intent(this, MusicPlayerService.class);
+    private PendingIntent buildPlaybackBroadcastPendingIntent(String action, int requestCode) {
+        Intent intent = new Intent(this, PlaybackActionReceiver.class);
         intent.setAction(action);
-        return PendingIntent.getService(
+        return PendingIntent.getBroadcast(
                 this,
                 requestCode,
                 intent,
@@ -434,13 +582,11 @@ public class MusicPlayerService extends Service {
     }
 
     /**
-     * 更新已经显示的播放通知。
+     * 更新前台通知。前台服务应通过 {@link #startForeground(int, Notification)} 刷新自定义 RemoteViews，
+     * 仅用 {@link NotificationManager#notify(int, Notification)} 在部分系统上折叠通知不会立即重绘。
      */
     private void updateNotification() {
-        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (manager != null) {
-            manager.notify(NOTIFICATION_ID, buildNotification());
-        }
+        startForeground(NOTIFICATION_ID, buildNotification());
     }
 
 
