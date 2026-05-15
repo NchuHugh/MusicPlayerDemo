@@ -28,6 +28,7 @@ import com.example.musicplayerdemo.data.MusicRepository;
 import com.example.musicplayerdemo.player.MusicPlayerService;
 import com.example.musicplayerdemo.player.PlaybackState;
 import com.example.musicplayerdemo.player.PlayerState;
+import com.example.musicplayerdemo.utils.AlbumCoverProgressUtil;
 import com.example.musicplayerdemo.utils.Constants;
 
 import java.util.List;
@@ -42,6 +43,9 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton btnMiniPlayPause;
     private MusicPlayerService musicPlayerService;
     private boolean serviceBound = false;
+    /*Handler：Android 中用于线程间通信的工具，可以将一个任务（Runnable）或消息（Message）投递到指定线程的消息队列中执行。
+    * Looper.getMainLooper() 获取主线程（UI 线程）的 Looper 对象。 当 Looper 启动后，会执行一个无限循环，直到线程终止
+    将这个 Looper 传递给 Handler 的构造方法，这个 Handler 会绑定到主线程。*/
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     /*每秒定时刷新*/
     private final Runnable miniPlayerRefreshRunnable = new Runnable() {
@@ -128,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         RecyclerView listView = findViewById(R.id.rvMusicList);
-        listView.setLayoutManager(new LinearLayoutManager(this));
+        listView.setLayoutManager(new LinearLayoutManager(this));  //默认方向是 VERTICAL 垂直
         listView.setAdapter(adapter);
     }
 
@@ -180,7 +184,13 @@ public class MainActivity extends AppCompatActivity {
 
         if (music.getCoverResId() != 0) {
             ivMiniCover.clearColorFilter();
-            ivMiniCover.setImageResource(music.getCoverResId());
+            ivMiniCover.setImageBitmap(AlbumCoverProgressUtil.createProgressCover(
+                    this,
+                    music.getCoverResId(),
+                    0,
+                    music.getDuration() * 1000,
+                    48
+            ));
         }
     }
 
@@ -211,7 +221,13 @@ public class MainActivity extends AppCompatActivity {
         tvMiniArtist.setText(music.getArtist());
         if (music.getCoverResId() != 0) {
             ivMiniCover.clearColorFilter();
-            ivMiniCover.setImageResource(music.getCoverResId());
+            ivMiniCover.setImageBitmap(AlbumCoverProgressUtil.createProgressCover(
+                    this,
+                    music.getCoverResId(),
+                    state.getCurrentPosition(),
+                    state.getDuration() * 1000,
+                    48
+            ));
         }
 
         if (state.getPlaybackState() == PlaybackState.PLAYING) {
@@ -293,9 +309,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 接收播放器 Service 绑定结果，并启动底部播放器状态同步。
+     * 接收播放器 Service 绑定结果，并启动底部播放器状态同步。serviceConnection是一个实例对象  继承了ServiceConnection接口的匿名内部类的实例对象
      */
     private final ServiceConnection serviceConnection = new ServiceConnection() {
+        /*
+         调用时机：当 bindService() 成功绑定到目标 Service，且 Service 的 onBind() 方法返回了一个有效的 IBinder 对象之后。
+         IBinder service：核心对象，正是 Service 的 onBind() 返回的那个 IBinder 实例。
+         */
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             MusicPlayerService.MusicBinder binder = (MusicPlayerService.MusicBinder) service;

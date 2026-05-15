@@ -76,7 +76,6 @@
             android:id="@+id/ivMiniCover"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="#E8EAED"
             android:contentDescription="当前歌曲封面"
             android:scaleType="centerCrop"
             android:src="@android:drawable/ic_media_play"

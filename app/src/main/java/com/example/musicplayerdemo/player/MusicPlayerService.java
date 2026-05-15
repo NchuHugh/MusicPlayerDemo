@@ -21,6 +21,7 @@ import com.example.musicplayerdemo.R;
 import com.example.musicplayerdemo.activity.PlayerActivity;
 import com.example.musicplayerdemo.data.Music;
 import com.example.musicplayerdemo.data.MusicRepository;
+import com.example.musicplayerdemo.utils.AlbumCoverProgressUtil;
 import com.example.musicplayerdemo.utils.Constants;
 
 import java.util.List;
@@ -52,6 +53,7 @@ public class MusicPlayerService extends Service {
         public void run() {
             if (mediaPlayer != null && isPlaying) {
                 playerState.setCurrentPosition(mediaPlayer.getCurrentPosition());
+                updateNotification();
                 handler.postDelayed(this, 1000);
             }
         }
@@ -382,7 +384,16 @@ public class MusicPlayerService extends Service {
         views.setTextViewText(R.id.tvNotificationArtist, artist);
 
         if (music != null && music.getCoverResId() != 0) {
-            views.setImageViewResource(R.id.ivNotificationCover, music.getCoverResId());
+            views.setImageViewBitmap(
+                    R.id.ivNotificationCover,
+                    AlbumCoverProgressUtil.createProgressCover(
+                            this,
+                            music.getCoverResId(),
+                            playerState.getCurrentPosition(),
+                            playerState.getDuration() * 1000,
+                            48
+                    )
+            );
         } else {
             views.setImageViewResource(R.id.ivNotificationCover, android.R.drawable.ic_media_play);
         }
